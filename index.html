@@ -350,7 +350,7 @@
     </div>
   </div>
 
-  <footer></footer>
+  <footer>총 방문 <span id="visitCount">-</span>회</footer>
 </div>
 
 <script>
@@ -1674,7 +1674,16 @@ function buildSignatureSheet(wb, label, passGrp, failGrp, rankMap){
   XLSX.utils.book_append_sheet(wb, ws, safeSheetName);
 }
 </script>
+
 <script data-goatcounter="https://ecloguehwang.goatcounter.com/count"
         async src="//gc.zgo.at/count.js"></script>
+
+<script>
+fetch('https://ecloguehwang.goatcounter.com/counter/TOTAL.json')
+  .then(r => r.json())
+  .then(d => { document.getElementById('visitCount').textContent = d.count; })
+  .catch(() => { document.getElementById('visitCount').textContent = '-'; });
+</script>
+
 </body>
 </html>
