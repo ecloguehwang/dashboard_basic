@@ -1,0 +1,1629 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>대입 대시보드</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@500;700;900&family=Noto+Sans+KR:wght@400;500;700;900&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.5.0/chart.umd.min.js"></script>
+<style>
+  :root{
+    --ink-navy: #10192e;
+    --ink-navy-2: #1b2a4a;
+    --paper: #fbf9f4;
+    --paper-dim: #f1eee5;
+    --gold: #c89b3c;
+    --gold-dim: #a9822f;
+    --teal: #3e7c7b;
+    --coral: #a6432e;
+    --sage: #5f7a52;
+    --muted: #8a93a6;
+    --line: rgba(251,249,244,0.12);
+    --line-dark: rgba(27,42,74,0.14);
+    --mono:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background: radial-gradient(1200px 700px at 10% -10%, #16233f 0%, var(--ink-navy) 55%) fixed;
+    color: var(--paper);
+    font-family: 'Noto Sans KR', sans-serif;
+    min-height: 100vh;
+    padding: 32px 20px 80px;
+  }
+  .wrap{max-width: 1180px; margin: 0 auto;}
+
+  header{
+    display:flex; justify-content:space-between; align-items:flex-end; gap:24px;
+    flex-wrap: wrap;
+    border-bottom: 1px solid var(--line);
+    padding-bottom: 22px; margin-bottom: 30px;
+  }
+  .eyebrow{
+    font-size: 12px; letter-spacing: .22em; color: var(--gold);
+    text-transform: uppercase; margin-bottom: 8px; font-weight: 700;
+  }
+  h1{
+    font-family:'Noto Serif KR', serif; font-weight: 900;
+    font-size: clamp(26px, 4vw, 38px); margin:0; letter-spacing: -0.01em;
+  }
+  .title-row{ display:flex; align-items:baseline; gap:12px; flex-wrap:wrap; }
+  .title-credit{ font-size: 17px; color: var(--muted); font-weight:500; white-space:nowrap; }
+  .sub{ color: var(--muted); font-size: 14px; margin-top: 8px; max-width: 52ch; }
+
+  .stamp{
+    width: 128px; height: 128px; border-radius: 50%;
+    border: 3px double var(--coral);
+    color: var(--coral);
+    display:flex; align-items:center; justify-content:center; text-align:center;
+    transform: rotate(-9deg);
+    font-family:'Noto Serif KR', serif; font-weight:900;
+    flex-shrink:0; position:relative; opacity:.92;
+    background: rgba(166,67,46,0.05);
+  }
+  .stamp .stamp-inner{ line-height:1.35; }
+  .stamp .stamp-title{ font-size:13px; letter-spacing:.08em; }
+  .stamp .stamp-rate{ font-size:22px; }
+  .stamp .stamp-count{ font-size:10px; color: var(--coral); opacity:.85; font-family:'Noto Sans KR',sans-serif; font-weight:700;}
+  .stamp.empty{ border-style:dashed; color:var(--muted); border-color: var(--muted); background:none; }
+
+  .stamp-group{ display:flex; align-items:center; gap:14px; flex-shrink:0; }
+
+  .stamp2{
+    width: 128px; height: 128px; border-radius: 50%;
+    border: 2px dashed var(--teal);
+    color: var(--teal);
+    display:flex; align-items:center; justify-content:center; text-align:center;
+    transform: rotate(7deg);
+    font-family:'Noto Serif KR', serif; font-weight:900;
+    flex-shrink:0; position:relative; opacity:.92;
+    background: rgba(62,124,123,0.05);
+  }
+  .stamp2 .stamp2-inner{ line-height:1.35; }
+  .stamp2 .stamp2-title{ font-size:11.5px; letter-spacing:.04em; }
+  .stamp2 .stamp2-rate{ font-size:20px; margin-top:2px; }
+  .stamp2 .stamp2-count{ font-size:10px; color: var(--coral); opacity:.85; font-family:'Noto Sans KR',sans-serif; font-weight:700; }
+  .stamp2.empty{ border-color: var(--muted); color: var(--muted); background:none; }
+
+  /* ---------------- 업로드 패널 ---------------- */
+  .panel{
+    background: rgba(251,249,244,0.04);
+    border: 1px solid var(--line);
+    border-radius: 16px;
+    padding: 24px;
+    margin-bottom: 24px;
+  }
+  .panel h2{
+    font-family:'Noto Serif KR', serif;
+    font-size: 16px; font-weight:700; margin: 0 0 4px;
+    color: var(--paper);
+  }
+  .panel .panel-hint{ color: var(--muted); font-size: 12.5px; margin: 0 0 16px; }
+
+  .drop-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
+  @media(max-width:640px){.drop-grid{grid-template-columns:1fr;}}
+
+  .dropzone{
+    position:relative;border:1.5px dashed var(--line);border-radius:12px;
+    padding:22px 16px;text-align:center;cursor:pointer;transition:.15s ease;
+    background: rgba(251,249,244,0.02);
+  }
+  .dropzone.susi{border-color:rgba(62,124,123,0.45);}
+  .dropzone.jsi{border-color:rgba(200,155,60,0.45);}
+  .dropzone:hover{background: rgba(251,249,244,0.05);}
+  .dropzone.drag-over.susi{background:rgba(62,124,123,0.14);border-color:var(--teal);}
+  .dropzone.drag-over.jsi{background:rgba(200,155,60,0.14);border-color:var(--gold);}
+  .dropzone.filled.susi{background:rgba(62,124,123,0.12);border-style:solid;border-color:var(--teal);}
+  .dropzone.filled.jsi{background:rgba(200,155,60,0.12);border-style:solid;border-color:var(--gold);}
+  .dropzone input{position:absolute;inset:0;opacity:0;cursor:pointer;}
+
+  .dz-tag{
+    display:inline-block;font-size:11px;font-weight:700;letter-spacing:.06em;
+    padding:3px 9px;border-radius:20px;margin-bottom:10px;
+  }
+  .susi .dz-tag{background:var(--teal);color:#fff;}
+  .jsi .dz-tag{background:var(--gold);color:var(--ink-navy);}
+  .dz-title{font-size:13.5px;font-weight:700;margin-bottom:4px;color:var(--paper);}
+  .dz-hint{font-size:12px;color:var(--muted);}
+  .dz-file{font-size:12px;font-family:var(--mono);color:var(--paper);word-break:break-all;margin-top:8px;}
+  .dz-warn{
+    display:none;margin-top:8px;font-size:11.5px;font-weight:700;color:#3a2600;
+    background:#f0c266;border:1px solid #d9a63f;border-radius:8px;padding:7px 10px;
+    text-align:left;line-height:1.4;
+  }
+  .dz-warn.show{display:block;}
+  .dz-clear{
+    display:inline-block;margin-top:8px;font-size:11.5px;color:var(--coral);
+    text-decoration:underline;position:relative;z-index:2;cursor:pointer;
+  }
+
+  .actions{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-top:18px;}
+  .btn{
+    display:inline-flex; align-items:center; gap:8px;
+    background: var(--gold); color: var(--ink-navy);
+    border:none; padding: 11px 22px; border-radius: 999px;
+    font-weight: 700; font-size: 14px; cursor:pointer;
+    font-family:'Noto Sans KR',sans-serif; transition:.15s ease;
+  }
+  .btn:hover{ background: var(--gold-dim); }
+  .btn:disabled{ background:#4a5266; color:#9aa2b5; cursor:not-allowed; }
+  .btn.ghost{ background: transparent; color: var(--paper); border: 1px solid var(--line); }
+  .btn.ghost:hover{ border-color: var(--gold); color: var(--gold); }
+  .btn.small{ padding: 9px 16px; font-size:12.5px; }
+  .filename-input{
+    font-family:var(--mono);font-size:12.5px;padding:10px 12px;border:1px solid var(--line);
+    border-radius:8px;background: rgba(251,249,244,0.05); color: var(--paper); min-width:230px;
+  }
+
+  .status-msg{font-size:13px;margin-top:12px;color:var(--muted);min-height:18px;line-height:1.5;}
+  .status-msg.error{color:#f0c8bd;font-weight:600;}
+  .status-msg.ok{color:#a8d8c8;font-weight:600;}
+
+  .status-row{
+    display:flex; align-items:center; justify-content:space-between;
+    gap: 16px; flex-wrap: wrap; margin-bottom: 24px;
+  }
+  .file-chip{
+    display:flex; align-items:center; gap:10px;
+    background: rgba(251,249,244,0.05); border:1px solid var(--line);
+    border-radius: 999px; padding: 8px 16px; font-size: 13px; color: var(--paper);
+  }
+  .file-chip .dot{ width:7px; height:7px; border-radius:50%; background:var(--sage); }
+  .error-banner{
+    background: rgba(166,67,46,0.12); border:1px solid var(--coral);
+    color:#f0c8bd; padding:14px 18px; border-radius:10px; font-size:13px; margin-bottom:24px;
+    display:none;
+  }
+
+  /* ---------------- 차트 그리드 ---------------- */
+  .grid{
+    display:grid; grid-template-columns: repeat(auto-fit, minmax(430px, 1fr));
+    gap: 22px;
+  }
+  .card{
+    background: var(--paper); color: var(--ink-navy-2);
+    border-radius: 16px; padding: 22px 22px 18px;
+    box-shadow: 0 18px 40px rgba(0,0,0,0.28);
+    border-top: 3px solid var(--gold);
+    position:relative;
+  }
+  .card-head{ display:flex; justify-content:space-between; align-items:baseline; margin-bottom:14px; gap:10px; flex-wrap: wrap;}
+  .card-num{ font-size:11px; color:var(--muted); font-weight:700; letter-spacing:.12em; }
+  .card h2{
+    font-family:'Noto Serif KR', serif; font-size: 17px; font-weight:700; margin:2px 0 0;
+    color: var(--ink-navy-2);
+  }
+  .card-head-actions{ display:flex; align-items:center; gap:8px; flex-shrink:0; }
+  .card-download-btn{
+    font-size:11px; font-weight:700; padding:6px 12px; border-radius:999px;
+    border:1px solid var(--teal); background:transparent; color: var(--teal);
+    cursor:pointer; transition:.15s ease; white-space:nowrap; flex-shrink:0;
+    font-family:'Noto Sans KR',sans-serif; display:inline-flex; align-items:center; gap:5px;
+  }
+  .card-download-btn:hover{ background: rgba(62,124,123,0.1); border-color: var(--teal); color: var(--teal); }
+  .card-download-btn:disabled{
+    opacity:.4; cursor:not-allowed; border-color: var(--line-dark); color: var(--muted);
+  }
+  .card-body{ position:relative; height: 380px; }
+  .card-empty{
+    height:100%; display:flex; flex-direction:column; align-items:center; justify-content:center;
+    color: var(--muted); font-size: 13px; text-align:center; gap:8px; padding: 0 20px;
+  }
+  .card-empty b{ color: var(--ink-navy-2); font-size:14px; }
+  canvas{ max-width:100%; }
+
+  footer{ text-align:center; color: var(--muted); font-size:12px; margin-top: 46px; }
+
+  @media (max-width: 520px){
+    .grid{ grid-template-columns: 1fr; }
+    .card-body{ height: 320px; }
+    header{ flex-direction: column; align-items:flex-start; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <div>
+      <div class="eyebrow">College Admission Dashboard</div>
+      <div class="title-row">
+        <h1>대입 대시보드</h1>
+        <span class="title-credit">배포자 CC BY 황성삼(수명고)</span>
+      </div>
+      <p class="sub"> Release version 2026.08.22</p>
+      <p class="sub">브라우저에서만 동작하며 업로드한 파일은 서버로 전송되지 않습니다.</p>
+    </div>
+    <div class="stamp-group">
+      <div id="stamp" class="stamp empty">
+        <div class="stamp-inner">
+          <div class="stamp-title">합격</div>
+          <div class="stamp-count">데이터 없음</div>
+        </div>
+      </div>
+      <div id="stamp2" class="stamp2 empty">
+        <div class="stamp2-inner">
+          <div class="stamp2-title">우리학교<br>수능백분위</div>
+          <div class="stamp2-count">데이터 없음</div>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <div class="panel" id="uploadPanel">
+    <h2>1. 원본 파일 업로드</h2>
+    <p class="panel-hint">수시합불자료와 정시합불자료 중 하나만 올려도 동작합니다. 업로드 즉시 자동으로 전처리가 실행됩니다.</p>
+    <div class="drop-grid">
+      <div class="dropzone susi" id="dzSusi">
+        <input type="file" id="fileSusi" accept=".xlsx,.xls">
+        <div class="dz-tag">수시</div>
+        <div class="dz-title">수시합불자료.xlsx</div>
+        <div class="dz-hint">클릭 또는 드래그하여 업로드 (선택)</div>
+        <div class="dz-file" id="dzSusiFile"></div>
+        <div class="dz-warn" id="dzSusiWarn"></div>
+        <span class="dz-clear" id="dzSusiClear" style="display:none;">파일 제거</span>
+      </div>
+      <div class="dropzone jsi" id="dzJsi">
+        <input type="file" id="fileJsi" accept=".xlsx,.xls">
+        <div class="dz-tag">정시</div>
+        <div class="dz-title">정시합불자료.xlsx</div>
+        <div class="dz-hint">클릭 또는 드래그하여 업로드 (선택)</div>
+        <div class="dz-file" id="dzJsiFile"></div>
+        <div class="dz-warn" id="dzJsiWarn"></div>
+        <span class="dz-clear" id="dzJsiClear" style="display:none;">파일 제거</span>
+      </div>
+    </div>
+    <div class="actions">
+      <button class="btn" id="processBtn" disabled>전처리 실행 &amp; 그래프 그리기</button>
+      <button class="btn ghost small" id="downloadBtn" style="display:none;">전처리 결과 엑셀 다운로드</button>
+      <input type="text" class="filename-input" id="filenameInput" style="display:none;">
+      <button class="btn ghost small" id="resetBtn" style="display:none;">전체 초기화</button>
+    </div>
+    <div class="status-msg" id="statusMsg"></div>
+  </div>
+
+  <div class="panel" id="signaturePanel" style="display:none;">
+    <h2>2. 시그니처 엑셀자료 생성</h2>
+    <p class="panel-hint">전처리된 데이터를 내신등급 구간(1.0~2.99 / 3.0~3.99 / 4.0~4.99 / 5.0~5.99 / 6.0~6.99 / 7.0~9.0)별 시트로 나누어, 합격·불합격 대학을 전형분류 색상으로 구분해 정리합니다. (같은 학번의 수시 전과목을 기준으로 정렬 · 등수 계산)</p>
+    <div class="actions">
+      <button class="btn" id="signatureBtn">시그니처 엑셀 생성</button>
+      <input type="text" class="filename-input" id="signatureFilenameInput">
+    </div>
+    <div class="status-msg" id="signatureStatusMsg"></div>
+  </div>
+
+  <div class="error-banner" id="errorBanner"></div>
+
+  <div class="grid">
+    <div class="card">
+      <div class="card-head">
+        <div><span class="card-num">CHART 01</span><h2>서울 주요대 합격자수</h2></div>
+        <div class="card-head-actions">
+          <button class="card-download-btn" id="chart1DownloadBtn" data-chart-id="chart1" data-filename="chart01_서울주요대합격자수" disabled>PNG 다운로드</button>
+        </div>
+      </div>
+      <div class="card-body"><canvas id="chart1"></canvas>
+        <div class="card-empty" id="empty1"><b>표시할 데이터가 없습니다</b><span>수시·정시 파일을 업로드하고 전처리를 실행해 주세요.</span></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-head">
+        <div><span class="card-num">CHART 02</span><h2>지원 대비 합격 · 불합격 누적</h2></div>
+        <div class="card-head-actions">
+          <button class="card-download-btn" id="chart2DownloadBtn" data-chart-id="chart2" data-filename="chart02_지원대비합불누적" disabled>PNG 다운로드</button>
+        </div>
+      </div>
+      <div class="card-body"><canvas id="chart2"></canvas>
+        <div class="card-empty" id="empty2"><b>표시할 데이터가 없습니다</b><span>수시·정시 파일을 업로드하고 전처리를 실행해 주세요.</span></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-head">
+        <div><span class="card-num">CHART 03</span><h2>내신 · 수능 상관관계</h2></div>
+        <div class="card-head-actions">
+          <button class="card-download-btn" id="chart3DownloadBtn" data-chart-id="chart3" data-filename="chart03_내신수능상관관계" disabled>PNG 다운로드</button>
+        </div>
+      </div>
+      <div class="card-body"><canvas id="chart3"></canvas>
+        <div class="card-empty" id="empty3"><b>표시할 데이터가 없습니다</b><span>수시·정시 파일을 업로드하고 전처리를 실행해 주세요.</span></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-head">
+        <div><span class="card-num">CHART 04</span><h2>전형별 합격률 · 합격횟수</h2></div>
+        <div class="card-head-actions">
+          <button class="card-download-btn" id="chart4DownloadBtn" data-chart-id="chart4" data-filename="chart04_전형별합격률" disabled>PNG 다운로드</button>
+        </div>
+      </div>
+      <div class="card-body"><canvas id="chart4"></canvas>
+        <div class="card-empty" id="empty4"><b>표시할 데이터가 없습니다</b><span>수시·정시 파일을 업로드하고 전처리를 실행해 주세요.</span></div>
+      </div>
+    </div>
+  </div>
+
+  <footer></footer>
+</div>
+
+<script>
+/* ================================================================
+   0. 공통 설정
+================================================================ */
+const COLOR = {
+  navy: '#1b2a4a', teal:'#3e7c7b', gold:'#c89b3c', coral:'#a6432e', sage:'#5f7a52', muted:'#8a93a6', grid:'rgba(27,42,74,0.08)'
+};
+if(typeof Chart === 'undefined' || typeof XLSX === 'undefined'){
+  document.addEventListener('DOMContentLoaded', ()=>{
+    const banner = document.getElementById('errorBanner');
+    banner.textContent = '그래프 라이브러리를 불러오지 못했습니다. 잠시 후 페이지를 새로고침해주세요.';
+    banner.style.display = 'block';
+  });
+  throw new Error('Chart.js 또는 xlsx 라이브러리가 로드되지 않았습니다.');
+}
+Chart.defaults.font.family = "'Noto Sans KR', sans-serif";
+Chart.defaults.color = COLOR.navy;
+let charts = {1:null,2:null,3:null,4:null};
+
+/* ================================================================
+   0-1. 차트별 PNG 다운로드
+   ----------------------------------------------------------------
+   Chart.js가 그린 <canvas>를 흰 배경 위에 합성한 뒤 PNG로 내보낸다.
+   (canvas는 기본적으로 배경이 투명하므로 흰 배경을 먼저 채운 뒤
+   그 위에 그려야 다운로드한 이미지가 깨끗하게 보인다)
+================================================================ */
+function downloadCanvasAsPNG(canvasId, filenameBase){
+  const canvas = document.getElementById(canvasId);
+  if(!canvas || canvas.style.display === 'none' || !canvas.width || !canvas.height){
+    alert('다운로드할 그래프가 없습니다. 먼저 데이터를 업로드하고 전처리를 실행해 주세요.');
+    return;
+  }
+  try{
+    const tmp = document.createElement('canvas');
+    tmp.width = canvas.width;
+    tmp.height = canvas.height;
+    const tctx = tmp.getContext('2d');
+    tctx.fillStyle = '#ffffff';
+    tctx.fillRect(0, 0, tmp.width, tmp.height);
+    tctx.drawImage(canvas, 0, 0);
+
+    const dataUrl = tmp.toDataURL('image/png');
+    const today = new Date();
+    const y = today.getFullYear();
+    const m = String(today.getMonth()+1).padStart(2,'0');
+    const d = String(today.getDate()).padStart(2,'0');
+    const a = document.createElement('a');
+    a.href = dataUrl;
+    a.download = `${filenameBase}_${y}${m}${d}.png`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+  }catch(err){
+    console.error(err);
+    alert('PNG 다운로드 중 오류가 발생했습니다: ' + err.message);
+  }
+}
+
+function refreshChartDownloadButtons(){
+  document.querySelectorAll('.card-download-btn').forEach(btn=>{
+    const chartId = btn.getAttribute('data-chart-id');
+    const canvas = document.getElementById(chartId);
+    const hasChart = canvas && canvas.style.display !== 'none' && canvas.width > 0 && canvas.height > 0;
+    btn.disabled = !hasChart;
+  });
+}
+
+document.addEventListener('DOMContentLoaded', ()=>{
+  document.querySelectorAll('.card-download-btn').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      const chartId = btn.getAttribute('data-chart-id');
+      const filenameBase = btn.getAttribute('data-filename') || chartId;
+      downloadCanvasAsPNG(chartId, filenameBase);
+    });
+  });
+});
+
+/* ================================================================
+   1. 업로드 & 전처리 (구 "합불 전처리" 앱 로직)
+================================================================ */
+let susiFile = null, jsiFile = null;
+let resultRows = null, resultColumns = null, susiCount = 0, jsiCount = 0;
+
+const dz = { susi: document.getElementById('dzSusi'), jsi: document.getElementById('dzJsi') };
+const fileInputs = { susi: document.getElementById('fileSusi'), jsi: document.getElementById('fileJsi') };
+const dzFileLabel = { susi: document.getElementById('dzSusiFile'), jsi: document.getElementById('dzJsiFile') };
+const dzClear = { susi: document.getElementById('dzSusiClear'), jsi: document.getElementById('dzJsiClear') };
+const dzWarn = { susi: document.getElementById('dzSusiWarn'), jsi: document.getElementById('dzJsiWarn') };
+const processBtn = document.getElementById('processBtn');
+const downloadBtn = document.getElementById('downloadBtn');
+const resetBtn = document.getElementById('resetBtn');
+const statusMsg = document.getElementById('statusMsg');
+const filenameInput = document.getElementById('filenameInput');
+const errorBanner = document.getElementById('errorBanner');
+
+const workYear = new Date().getFullYear();
+
+function buildFilename(){
+  let tag = '';
+  if(susiFile && jsiFile) tag = 'susijsi';
+  else if(susiFile) tag = 'susi';
+  else if(jsiFile) tag = 'jsi';
+  else tag = 'susijsi';
+  return `habbul_${tag}_${workYear}.xlsx`;
+}
+function refreshFilenameInput(){ filenameInput.value = buildFilename(); }
+refreshFilenameInput();
+
+function wireDropzone(kind){
+  const zone = dz[kind];
+  const input = fileInputs[kind];
+  zone.addEventListener('dragover', e=>{ e.preventDefault(); zone.classList.add('drag-over'); });
+  zone.addEventListener('dragleave', ()=> zone.classList.remove('drag-over'));
+  zone.addEventListener('drop', e=>{
+    e.preventDefault();
+    zone.classList.remove('drag-over');
+    if(e.dataTransfer.files && e.dataTransfer.files[0]) setFile(kind, e.dataTransfer.files[0]);
+  });
+  input.addEventListener('change', e=>{
+    if(e.target.files && e.target.files[0]) setFile(kind, e.target.files[0]);
+  });
+  dzClear[kind].addEventListener('click', e=>{
+    e.preventDefault(); e.stopPropagation();
+    clearFile(kind);
+  });
+}
+
+function setFile(kind, file){
+  if(kind==='susi') susiFile = file; else jsiFile = file;
+  dz[kind].classList.add('filled');
+  dzFileLabel[kind].textContent = file.name;
+  dzClear[kind].style.display = 'inline-block';
+  hideDzWarn(kind);
+  checkFileTypeWarning(kind, file);
+  refreshProcessButton();
+  refreshFilenameInput();
+  resetResult();
+}
+function clearFile(kind){
+  if(kind==='susi') susiFile = null; else jsiFile = null;
+  fileInputs[kind].value = '';
+  dz[kind].classList.remove('filled');
+  dzFileLabel[kind].textContent = '';
+  dzClear[kind].style.display = 'none';
+  hideDzWarn(kind);
+  refreshProcessButton();
+  refreshFilenameInput();
+  resetResult();
+}
+
+function headerHasGoon(headerRow){
+  return (headerRow || []).some(v => v!==null && v!==undefined && String(v).trim()==='군');
+}
+
+// ── 헤더 행 자동 탐지 ─────────────────────────────────────────
+// 기존에는 헤더가 항상 3번째 행(aoa[2])에 있다고 가정했지만, 학교/양식마다
+// 안내문구 행 수가 달라질 수 있어 대학·최종·모집단위·전형분류·지원시기·군
+// 등 핵심 열 이름이 가장 많이 발견되는 행을 헤더로 자동 탐지한다.
+const SIG_KEYWORDS = ['대학','최종','모집단위','전형분류','지원시기','군','이름','학번','전과목'];
+function normHeaderCell(v){
+  return v===null || v===undefined ? '' : String(v).replace(/[\s\n]/g,'');
+}
+function detectHeaderRow(aoa, maxScan=8){
+  let bestIdx = 2, bestScore = -1;
+  const limit = Math.min(aoa.length, maxScan);
+  for(let i=0;i<limit;i++){
+    const row = aoa[i] || [];
+    const cells = row.map(normHeaderCell);
+    let score = 0;
+    SIG_KEYWORDS.forEach(k=>{ if(cells.includes(k)) score++; });
+    if(score > bestScore){ bestScore = score; bestIdx = i; }
+  }
+  return { idx: bestIdx, score: bestScore };
+}
+
+async function checkFileTypeWarning(kind, file){
+  try{
+    const aoa = await readWorkbookAOA(file);
+    const { idx } = detectHeaderRow(aoa);
+    const header = aoa[idx] || [];
+    const hasGoon = headerHasGoon(header);
+    if(kind==='susi' && hasGoon){
+      showDzWarn('susi', '⚠ "군" 열이 감지되었습니다. 정시합불자료가 수시 자리에 업로드된 것은 아닌지 확인해 주세요.');
+    } else if(kind==='jsi' && !hasGoon){
+      showDzWarn('jsi', '⚠ "군" 열이 없습니다. 수시합불자료가 정시 자리에 업로드된 것은 아닌지 확인해 주세요.');
+    } else {
+      hideDzWarn(kind);
+    }
+  }catch(err){
+    hideDzWarn(kind);
+  }
+}
+function showDzWarn(kind, msg){ dzWarn[kind].textContent = msg; dzWarn[kind].classList.add('show'); }
+function hideDzWarn(kind){ dzWarn[kind].textContent = ''; dzWarn[kind].classList.remove('show'); }
+
+function refreshProcessButton(){ processBtn.disabled = !(susiFile || jsiFile); }
+
+function resetResult(){
+  resultRows = null; resultColumns = null;
+  downloadBtn.style.display = 'none';
+  filenameInput.style.display = 'none';
+  statusMsg.textContent = '';
+  statusMsg.className = 'status-msg';
+  errorBanner.style.display = 'none';
+  document.getElementById('signaturePanel').style.display = 'none';
+  document.getElementById('signatureStatusMsg').textContent = '';
+  document.getElementById('signatureStatusMsg').className = 'status-msg';
+  clearAllCharts();
+  setStampEmpty();
+}
+
+function clearAllCharts(){
+  [1,2,3,4].forEach(n=>{
+    if(charts[n]){ charts[n].destroy(); charts[n]=null; }
+    document.getElementById('chart'+n).style.display='none';
+    const el = document.getElementById('empty'+n);
+    el.style.display='flex';
+    el.innerHTML = '<b>표시할 데이터가 없습니다</b><span>수시·정시 파일을 업로드하고 전처리를 실행해 주세요.</span>';
+  });
+  refreshChartDownloadButtons();
+}
+
+wireDropzone('susi');
+wireDropzone('jsi');
+
+resetBtn.addEventListener('click', ()=>{
+  clearFile('susi');
+  clearFile('jsi');
+});
+
+/* ---------------- 엑셀 읽기 ---------------- */
+function readWorkbookAOA(file){
+  return new Promise((resolve, reject)=>{
+    const reader = new FileReader();
+    reader.onload = e=>{
+      try{
+        const data = new Uint8Array(e.target.result);
+        const wb = XLSX.read(data, {type:'array', cellDates:false});
+        const sheetName = wb.SheetNames[0];
+        const ws = wb.Sheets[sheetName];
+        const aoa = XLSX.utils.sheet_to_json(ws, {header:1, raw:true, defval:null});
+        resolve(aoa);
+      }catch(err){ reject(err); }
+    };
+    reader.onerror = ()=> reject(reader.error);
+    reader.readAsArrayBuffer(file);
+  });
+}
+
+/* ---------------- 열 이름 정리 ---------------- */
+function prefixRange(columns, start, end, prefix){
+  for(let i=start; i<end && i<columns.length; i++){
+    columns[i] = prefix + (columns[i]===null||columns[i]===undefined? '' : String(columns[i]));
+  }
+}
+function applyColumnRenaming(rawHeaderRow, isJsi){
+  let columns = rawHeaderRow.map(v => v===null||v===undefined? '' : String(v).trim());
+  if(isJsi){
+    const idx = columns.indexOf('군');
+    if(idx >= 0) columns[idx] = '지원\n시기';
+  }
+  prefixRange(columns, 32, 36, '국어_');
+  prefixRange(columns, 36, 40, '수학_');
+  prefixRange(columns, 40, 41, '영어_');
+  prefixRange(columns, 42, 46, '선택1_');
+  prefixRange(columns, 46, 50, '선택2_');
+  prefixRange(columns, 50, 51, '한국사_');
+  prefixRange(columns, 51, 53, '제2외국어_');
+  columns = columns.map(c => c.replace(/[\r\n]/g, ''));
+  return columns;
+}
+function buildRows(columns, dataRows){
+  const rows = [];
+  for(const r of dataRows){
+    const isBlank = r.every(v => v===null || v===undefined || v==='');
+    if(isBlank) continue;
+    const obj = {};
+    columns.forEach((c,i)=>{ obj[c] = (r[i]===undefined) ? null : r[i]; });
+    if(obj['최종']===null || obj['최종']===undefined) obj['최종'] = '불';
+    rows.push(obj);
+  }
+  return rows;
+}
+function processSusi(aoa){
+  const { idx } = detectHeaderRow(aoa);
+  const headerRow = aoa[idx] || [];
+  const columns = applyColumnRenaming(headerRow, false);
+  const dataRows = aoa.slice(idx + 1);
+  return { columns, rows: buildRows(columns, dataRows), headerRowIdx: idx };
+}
+function processJsi(aoa){
+  const { idx } = detectHeaderRow(aoa);
+  const headerRow = aoa[idx] || [];
+  const columns = applyColumnRenaming(headerRow, true);
+  const dataRows = aoa.slice(idx + 2); // 정시는 헤더 다음 여분의 한 행을 추가로 제거
+  return { columns, rows: buildRows(columns, dataRows), headerRowIdx: idx };
+}
+
+/* ---------------- 결합 및 파생 열 계산 ---------------- */
+const CONVERT_COLS = [
+  '국어_백분위','수학_백분위','선택1_백분위','선택2_백분위',
+  '국어_표준점수','수학_표준점수','선택1_표준점수','선택2_표준점수',
+  '국어_등급','수학_등급','영어_등급','선택1_등급','선택2_등급'
+];
+const JEONHYEONG_MAP = {
+  '면접위주':'종합', '실기위주':'실기', '학생부위주':'교과',
+  '수능위주':'수능', '실기/실적위주':'실기', '일반전형':'실기'
+};
+function toNum(v){
+  if(v===null || v===undefined || v==='') return NaN;
+  const n = Number(v);
+  return Number.isNaN(n) ? NaN : n;
+}
+function pdStr(v){
+  if(v===null || v===undefined) return 'nan';
+  if(typeof v==='number' && Number.isNaN(v)) return 'nan';
+  return String(v);
+}
+function combineAndCompute(susiData, jsiData){
+  let columnOrder = [];
+  let combined = [];
+  if(susiData){ columnOrder = susiData.columns.slice(); combined = combined.concat(susiData.rows); }
+  if(jsiData){
+    jsiData.columns.forEach(c=>{ if(!columnOrder.includes(c)) columnOrder.push(c); });
+    combined = combined.concat(jsiData.rows);
+  }
+  for(const row of combined){
+    if(row['전형분류'] !== undefined){
+      const mapped = JEONHYEONG_MAP[row['전형분류']];
+      if(mapped !== undefined) row['전형분류'] = mapped;
+    }
+    for(const col of CONVERT_COLS){ row[col] = toNum(row[col]); }
+
+    const sum4 = row['국어_표준점수'] + row['수학_표준점수'] + row['선택1_표준점수'] + row['선택2_표준점수'];
+    row['표점합수능'] = Number.isNaN(sum4) ? 0 : Math.trunc(sum4);
+
+    const pct = (row['국어_백분위'] + row['수학_백분위'] + (row['선택1_백분위'] + row['선택2_백분위'])/2) / 3;
+    row['백분위수능'] = Number.isNaN(pct) ? NaN : Math.round(pct*10)/10;
+
+    const grade = (row['국어_등급'] + row['수학_등급'] + row['영어_등급'] + (row['선택1_등급'] + row['선택2_등급'])/2) / 4;
+    row['등급수능'] = Number.isNaN(grade) ? NaN : Math.round(grade*10)/10;
+
+    const 표점str = String(row['표점합수능']);
+    const 백분위str = Number.isNaN(row['백분위수능']) ? 'nan' : row['백분위수능'].toFixed(1);
+    const 등급str = Number.isNaN(row['등급수능']) ? 'nan' : row['등급수능'].toFixed(1);
+
+    row['이름_대학_모집단위_최종_표점합수능_백분위수능_등급수능'] =
+      `${pdStr(row['이름'])} ${pdStr(row['대학'])} ${pdStr(row['모집단위'])} ${pdStr(row['최종'])}/${표점str}점 ${백분위str}% ${등급str}등급`;
+    row['대학_모집단위_최종_표점합수능_백분위수능_등급수능'] =
+      `${pdStr(row['대학'])} ${pdStr(row['모집단위'])} ${pdStr(row['최종'])}/${표점str}점 ${백분위str}% ${등급str}등급`;
+  }
+  ['표점합수능','백분위수능','등급수능',
+   '이름_대학_모집단위_최종_표점합수능_백분위수능_등급수능',
+   '대학_모집단위_최종_표점합수능_백분위수능_등급수능'].forEach(c=>{
+    if(!columnOrder.includes(c)) columnOrder.push(c);
+  });
+  return { columns: columnOrder, rows: combined };
+}
+
+/* ---------------- 전처리 실행 → 대시보드 렌더링까지 자동 연결 ---------------- */
+processBtn.addEventListener('click', async ()=>{
+  if(!susiFile && !jsiFile){
+    statusMsg.textContent = '수시 또는 정시 파일을 하나 이상 업로드해 주세요.';
+    statusMsg.className = 'status-msg error';
+    return;
+  }
+  processBtn.disabled = true;
+  statusMsg.textContent = '전처리 중...';
+  statusMsg.className = 'status-msg';
+  errorBanner.style.display = 'none';
+
+  try{
+    let susiData = null, jsiData = null;
+    let mismatchWarnings = [];
+
+    if(susiFile){
+      const aoa = await readWorkbookAOA(susiFile);
+      const { idx } = detectHeaderRow(aoa);
+      if(headerHasGoon(aoa[idx] || [])){
+        mismatchWarnings.push('⚠ 수시 자리 파일에서 "군" 열이 감지되었습니다. 정시합불자료가 아닌지 확인해 주세요.');
+      }
+      susiData = processSusi(aoa);
+    }
+    if(jsiFile){
+      const aoa = await readWorkbookAOA(jsiFile);
+      const { idx } = detectHeaderRow(aoa);
+      if(!headerHasGoon(aoa[idx] || [])){
+        mismatchWarnings.push('⚠ 정시 자리 파일에서 "군" 열이 없습니다. 수시합불자료가 아닌지 확인해 주세요.');
+      }
+      jsiData = processJsi(aoa);
+    }
+
+    const combined = combineAndCompute(susiData, jsiData);
+    resultRows = combined.rows;
+    resultColumns = combined.columns;
+    susiCount = susiData ? susiData.rows.length : 0;
+    jsiCount = jsiData ? jsiData.rows.length : 0;
+
+    if(!resultRows.length){
+      statusMsg.textContent = '전처리 결과 유효한 데이터 행이 없습니다. 파일 형식을 확인해 주세요.';
+      statusMsg.className = 'status-msg error';
+      return;
+    }
+
+    // 그래프·시그니처 자료가 요구하는 핵심 열이 실제로 감지됐는지 확인
+    const REQUIRED_CORE_COLS = ['대학','모집단위','최종','지원시기','전형분류','전과목','등급수능'];
+    const missingCore = REQUIRED_CORE_COLS.filter(c => !resultColumns.includes(c));
+
+    // 대시보드가 기대하는 형태로 정규화(문자열 공백 제거)한 뒤 4개 차트에 바로 반영
+    const normalized = normalizeRows(resultRows);
+    renderAll(normalized);
+
+    downloadBtn.style.display = 'inline-flex';
+    filenameInput.style.display = 'inline-block';
+    resetBtn.style.display = 'inline-flex';
+
+    document.getElementById('signaturePanel').style.display = 'block';
+    document.getElementById('signatureFilenameInput').value = `signature_${workYear}.xlsx`;
+    document.getElementById('signatureStatusMsg').textContent = '';
+    document.getElementById('signatureStatusMsg').className = 'status-msg';
+
+    const detectedColsPreview = resultColumns.join(', ');
+
+    if(missingCore.length){
+      mismatchWarnings.push(`⚠ 다음 핵심 열을 원본 파일에서 찾지 못했습니다: ${missingCore.join(', ')}. 원본 엑셀의 실제 열 이름을 확인해 주세요.`);
+    }
+
+    if(mismatchWarnings.length){
+      statusMsg.innerHTML = mismatchWarnings.join('<br>') +
+        `<br>전처리는 완료되었습니다 — 총 ${resultRows.length}행.` +
+        `<br><span style="opacity:.85">감지된 열(${resultColumns.length}개): ${detectedColsPreview}</span>`;
+      statusMsg.className = 'status-msg error';
+    } else {
+      statusMsg.innerHTML = `전처리 완료 — 총 ${resultRows.length}행 (수시 ${susiCount} · 정시 ${jsiCount}) · 아래 그래프에 반영되었습니다.` +
+        `<br><span style="opacity:.7">감지된 열(${resultColumns.length}개): ${detectedColsPreview}</span>`;
+      statusMsg.className = 'status-msg ok';
+    }
+  }catch(err){
+    console.error(err);
+    statusMsg.textContent = '전처리 중 오류가 발생했습니다: ' + err.message;
+    statusMsg.className = 'status-msg error';
+  }finally{
+    processBtn.disabled = false;
+  }
+});
+
+downloadBtn.addEventListener('click', ()=>{
+  if(!resultRows){ return; }
+  let filename = filenameInput.value.trim() || buildFilename();
+  if(!filename.toLowerCase().endsWith('.xlsx')) filename += '.xlsx';
+
+  const cleanRows = resultRows.map(row=>{
+    const out = {};
+    resultColumns.forEach(c=>{
+      const v = row[c];
+      out[c] = (typeof v==='number' && Number.isNaN(v)) ? 'nan' : v;
+    });
+    return out;
+  });
+
+  const ws = XLSX.utils.json_to_sheet(cleanRows, {header: resultColumns});
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, '합불자료');
+  XLSX.writeFile(wb, filename);
+});
+
+/* ================================================================
+   2. 대시보드 렌더링 (구 "대입 결과 대시보드" 앱 로직)
+================================================================ */
+function canonicalizeUni(name){
+  if(name===null || name===undefined) return name;
+  let s = String(name).trim();
+  s = s.replace(/대학교/g, '대');
+  return s;
+}
+
+function normalizeRows(rows){
+  return rows.map(r=>{
+    const o = {};
+    Object.keys(r).forEach(k=>{
+      const key = String(k).trim();
+      let v = r[k];
+      if(typeof v === 'string') v = v.trim();
+      o[key] = v;
+    });
+    return o;
+  });
+}
+
+function getCol(row, names){
+  for(const n of names){ if(row.hasOwnProperty(n)) return n; }
+  return null;
+}
+function colExists(rows, names){
+  if(!rows.length) return null;
+  return getCol(rows[0], names);
+}
+// required: [{label:'대학', col:colUni}, ...] 형태로 넘기면 실제로 없는 열 이름만 골라 메시지를 만든다
+function missingColsMessage(required){
+  const missing = required.filter(r => !r.col).map(r => r.label);
+  return `${missing.join(' / ')} 열을 찾을 수 없습니다. (전처리 결과에 없는 열입니다)`;
+}
+
+function renderAll(rows){
+  renderChart1(rows);
+  renderChart2(rows);
+  renderChart3(rows);
+  renderChart4(rows);
+  renderStamp(rows);
+  renderStamp2(rows);
+  refreshChartDownloadButtons();
+}
+
+function setStampEmpty(){
+  const el = document.getElementById('stamp');
+  el.className = 'stamp empty';
+  el.innerHTML = '<div class="stamp-inner"><div class="stamp-title">합격</div><div class="stamp-count">데이터 없음</div></div>';
+  setStamp2Empty();
+}
+
+function setStamp2Empty(){
+  const el = document.getElementById('stamp2');
+  el.className = 'stamp2 empty';
+  el.innerHTML = '<div class="stamp2-inner"><div class="stamp2-title">우리학교<br>수능백분위</div><div class="stamp2-count">데이터 없음</div></div>';
+}
+
+// 22. 학교 수능 백분위평균
+// 학번에 '380'이 포함된 재수생 행은 제외한 뒤, 백분위수능의 평균을
+// 반올림하여 "우리학교 수능백분위 점수 00%" 형태로 표시한다.
+function renderStamp2(rows){
+  const colPct = colExists(rows, ['백분위수능']);
+  if(!colPct){ setStamp2Empty(); return; }
+  const colId = colExists(rows, ['학번']);
+
+  const subset = colId ? rows.filter(r=> !String(r[colId]).includes('380')) : rows;
+  const vals = subset
+    .map(r=> r[colPct])
+    .filter(v=> v!==null && v!==undefined && v!=='' && !(typeof v==='number' && Number.isNaN(v)))
+    .map(Number)
+    .filter(v=> !isNaN(v));
+
+  if(!vals.length){ setStamp2Empty(); return; }
+
+  const mean = Math.round(vals.reduce((a,b)=>a+b,0) / vals.length);
+  const el = document.getElementById('stamp2');
+  el.className = 'stamp2';
+  el.innerHTML = `<div class="stamp2-inner">
+      <div class="stamp2-title">우리학교<br>수능백분위</div>
+      <div class="stamp2-rate">${mean}%</div>
+    </div>`;
+}
+
+function renderStamp(rows){
+  const colFinal = colExists(rows, ['최종']);
+  if(!colFinal){ setStampEmpty(); return; }
+  const total = rows.length;
+  const pass = rows.filter(r=>r[colFinal]==='합').length;
+  const rate = total ? Math.round(pass/total*100) : 0;
+  const el = document.getElementById('stamp');
+  el.className = 'stamp';
+  el.innerHTML = `<div class="stamp-inner">
+      <div class="stamp-title">합격</div>
+      <div class="stamp-rate">${rate}%</div>
+      <div class="stamp-count">${pass}회 / ${total}회</div>
+    </div>`;
+}
+
+function showEmpty(n, message){
+  document.getElementById('chart'+n).style.display='none';
+  const el = document.getElementById('empty'+n);
+  el.style.display='flex';
+  el.innerHTML = `<b>표시할 데이터가 없습니다</b><span>${message}</span>`;
+  if(charts[n]){ charts[n].destroy(); charts[n]=null; }
+  refreshChartDownloadButtons();
+}
+function showChart(n){
+  document.getElementById('chart'+n).style.display='block';
+  document.getElementById('empty'+n).style.display='none';
+  refreshChartDownloadButtons();
+}
+
+/* ---- CHART 1: 서울 주요대 합격자수 ---- */
+const CH1_UNI = ['가천대(메디컬)','인하대','순천향대','충북대','서울대','연세대','고려대','서강대','성균관대','한양대','중앙대', '경희대',
+  '한국외국어대','서울시립대','이화여자대','건국대','동국대','홍익대','숙명여자대','국민대','숭실대','세종대', '단국대', '서울과기대',
+  '광운대','명지대','상명대','가톨릭대','가천대',
+  '한국과학기술원(KAIST)',  '광주과학기술원(GIST)', '대구경북과학기술원(DGIST)', '울산과학기술원(UNIST)','한국예술종합학교'];
+const CH1_MED_HIGHLIGHT = ['영남대','대구가톨릭대','고신대'];
+
+function formatUniNameCh1(u){
+  if(u==='한국예술종합학교') return u;
+  if(u==='한국과학기술원(KAIST)') return 'KAIST';
+  let name = u;
+  name = name.replace('숙명여자대','숙명여대').replace('이화여자대','이화여대');
+  return name;
+}
+function toVerticalLabel(name){ return name.split(''); }
+
+function renderChart1(rows){
+  const colUni = colExists(rows, ['대학']);
+  const colFinal = colExists(rows, ['최종']);
+  const colTiming = colExists(rows, ['지원시기']);
+  if(!colUni || !colFinal || !colTiming){
+    showEmpty(1, missingColsMessage([{label:'대학',col:colUni},{label:'최종',col:colFinal},{label:'지원시기',col:colTiming}])); return;
+  }
+  const results = [];
+  CH1_UNI.forEach(u=>{
+    let rowsU;
+    if(u==='경희대'){
+      rowsU = rows.filter(r=> ['경희대','경희대(국제)'].includes(canonicalizeUni(r[colUni])) && r[colFinal]==='합');
+    } else if(u==='가톨릭대'){
+      rowsU = rows.filter(r=> ['가톨릭대','가톨릭대(성심)'].includes(canonicalizeUni(r[colUni])) && r[colFinal]==='합');
+    } else {
+      rowsU = rows.filter(r=> canonicalizeUni(r[colUni])===u && r[colFinal]==='합');
+    }
+    let su=0, je=0;
+    rowsU.forEach(r=>{
+      const t = String(r[colTiming]||'');
+      if(t.includes('수시')) su++;
+      else if(t.includes('정시')) je++;
+    });
+    if(su>=1 || je>=1) results.push({uni:u, su, je});
+  });
+  if(!results.length){ showEmpty(1, '조건에 맞는 합격 데이터가 없습니다.'); return; }
+  showChart(1);
+  results.sort((a,b)=> (a.su+a.je) - (b.su+b.je));
+
+  const labels = results.map(r=>toVerticalLabel(formatUniNameCh1(r.uni)));
+  const suData = results.map(r=>r.su);
+  const jeData = results.map(r=>r.je);
+  const uniRaw = results.map(r=>r.uni);
+
+  if(charts[1]) charts[1].destroy();
+  charts[1] = new Chart(document.getElementById('chart1'), {
+    type:'bar',
+    data:{ labels, datasets:[
+      {label:'수시', data:suData, backgroundColor: COLOR.teal, borderRadius:2, maxBarThickness:34},
+      {label:'정시', data:jeData, backgroundColor: COLOR.gold, borderRadius:2, maxBarThickness:34},
+    ]},
+    options:{
+      responsive:true, maintainAspectRatio:false,
+      layout:{ padding:{ top: 22 } },
+      scales:{
+        x:{ stacked:true, grid:{display:false}, ticks:{font:{size:10}} },
+        y:{ stacked:true, display:false, grid:{display:false} }
+      },
+      plugins:{
+        legend:{ position:'top', align:'end', labels:{boxWidth:12, font:{size:12}} },
+        title:{ display:true, text:'주요대 합격자 (단위: 명)', align:'start', font:{size:15, family:"'Noto Serif KR', serif", weight:'700'}, color: COLOR.navy, padding:{bottom:14} }
+      }
+    },
+    plugins:[{
+      id:'ch1labels',
+      afterDatasetsDraw(chart){
+        const {ctx} = chart;
+        const meta0 = chart.getDatasetMeta(0);
+        const meta1 = chart.getDatasetMeta(1);
+        ctx.save();
+        ctx.font = "700 12px 'Noto Sans KR', sans-serif";
+        ctx.textAlign = 'center';
+        results.forEach((r,i)=>{
+          const bar0 = meta0.data[i], bar1 = meta1.data[i];
+          if(r.su>=1 && r.je===0){
+            ctx.fillStyle = COLOR.navy;
+            ctx.fillText(r.su, bar0.x, bar0.y - 6);
+          } else if(r.su===0 && r.je>=1){
+            ctx.fillStyle = COLOR.navy;
+            ctx.fillText(r.je, bar1.x, bar1.y - 6);
+          } else if(r.su>=1 && r.je>=1){
+            ctx.fillStyle = '#ffffff';
+            ctx.fillText(r.su, bar0.x, bar0.y + 4);
+            ctx.fillStyle = COLOR.navy;
+            ctx.fillText(r.su+r.je, bar1.x, bar1.y - 6);
+          }
+          if(CH1_MED_HIGHLIGHT.includes(uniRaw[i]) && r.su>=1){
+            ctx.save();
+            ctx.translate(bar0.x, bar0.y + 14);
+            ctx.rotate(-Math.PI/2);
+            ctx.fillStyle = '#ffffff';
+            ctx.font = "700 9px 'Noto Sans KR', sans-serif";
+            ctx.fillText('의대', 0, 0);
+            ctx.restore();
+          }
+        });
+        ctx.restore();
+      }
+    }]
+  });
+}
+
+/* ---- CHART 2: 합격/불합격 누적 ---- */
+const CH2_UNI = ['서울대','연세대','고려대','서강대','성균관대','한양대','중앙대','경희대',
+  '한국외국어대','서울시립대','이화여자대','건국대','동국대','홍익대','숙명여자대',
+  '국민대','숭실대','세종대','단국대','광운대','명지대','상명대','가천대','가톨릭대'];
+
+function formatUniNameCh2(u){
+  if(u==='가천대(글로벌)') return '가천대·글로벌';
+  let name = u;
+  name = name.replace('숙명여자대','숙명여대').replace('이화여자대','이화여대');
+  return name;
+}
+
+function renderChart2(rows){
+  const colUni = colExists(rows, ['대학']);
+  const colFinal = colExists(rows, ['최종']);
+  if(!colUni || !colFinal){ showEmpty(2, missingColsMessage([{label:'대학',col:colUni},{label:'최종',col:colFinal}])); return; }
+
+  const results = [];
+  CH2_UNI.forEach(u=>{
+    let subset;
+    if(u==='가천대'){ subset = rows.filter(r=> ['가천대','가천대(메디컬)'].includes(canonicalizeUni(r[colUni]))); }
+    else if(u==='경희대'){ subset = rows.filter(r=> ['경희대','경희대(국제)'].includes(canonicalizeUni(r[colUni]))); }
+    else if(u==='가톨릭대'){ subset = rows.filter(r=> ['가톨릭대','가톨릭대(성심)'].includes(canonicalizeUni(r[colUni]))); }
+    else{ subset = rows.filter(r=> canonicalizeUni(r[colUni])===u); }
+    const app = subset.length;
+    const acc = subset.filter(r=>r[colFinal]==='합').length;
+    if(app>0) results.push({uni:u, app, acc});
+  });
+
+  if(!results.length){ showEmpty(2, '조건에 맞는 지원 데이터가 없습니다.'); return; }
+  showChart(2);
+  results.sort((a,b)=>a.app-b.app);
+
+  const labels = results.map(r=>toVerticalLabel(formatUniNameCh2(r.uni)));
+  const accData = results.map(r=>r.acc);
+  const failData = results.map(r=>r.app - r.acc);
+
+  if(charts[2]) charts[2].destroy();
+  charts[2] = new Chart(document.getElementById('chart2'), {
+    type:'bar',
+    data:{ labels, datasets:[
+      {label:'합격', data:accData, backgroundColor: COLOR.teal, borderRadius:2, maxBarThickness:30},
+      {label:'불합격', data:failData, backgroundColor: COLOR.coral, borderRadius:2, maxBarThickness:30},
+    ]},
+    options:{
+      responsive:true, maintainAspectRatio:false,
+      layout:{ padding:{ top: 22 } },
+      scales:{
+        x:{ stacked:true, grid:{display:false}, ticks:{font:{size:9.5}} },
+        y:{ stacked:true, display:false, grid:{display:false} }
+      },
+      plugins:{
+        legend:{ position:'top', align:'end', labels:{boxWidth:12, font:{size:12}} },
+        title:{ display:true, text:'지원횟수 대비 합격자수', align:'start', font:{size:15, family:"'Noto Serif KR', serif", weight:'700'}, color: COLOR.navy, padding:{bottom:14} }
+      }
+    },
+    plugins:[{
+      id:'ch2labels',
+      afterDatasetsDraw(chart){
+        const {ctx} = chart;
+        const meta0 = chart.getDatasetMeta(0);
+        const meta1 = chart.getDatasetMeta(1);
+        ctx.save();
+        ctx.font = "700 11px 'Noto Sans KR', sans-serif";
+        ctx.textAlign = 'center';
+        results.forEach((r,i)=>{
+          if(r.acc>0){
+            ctx.fillStyle='#ffffff';
+            ctx.fillText(r.acc, meta0.data[i].x, meta0.data[i].y + 4);
+          }
+          if(r.app>0){
+            ctx.fillStyle = COLOR.navy;
+            ctx.fillText(r.app, meta1.data[i].x, meta1.data[i].y - 6);
+          }
+        });
+        ctx.restore();
+      }
+    }]
+  });
+}
+
+/* ---- CHART 3: 내신-수능 상관관계 산점도 ---- */
+function pearson(x,y){
+  const n = x.length;
+  const mx = x.reduce((a,b)=>a+b,0)/n;
+  const my = y.reduce((a,b)=>a+b,0)/n;
+  let num=0, dx=0, dy=0;
+  for(let i=0;i<n;i++){ num += (x[i]-mx)*(y[i]-my); dx += (x[i]-mx)**2; dy += (y[i]-my)**2; }
+  return num/Math.sqrt(dx*dy);
+}
+
+function renderChart3(rows){
+  const colX = colExists(rows, ['전과목']);
+  const colY = colExists(rows, ['등급수능']);
+  if(!colX || !colY){ showEmpty(3, missingColsMessage([{label:'전과목',col:colX},{label:'등급수능',col:colY}])); return; }
+  const colId = colExists(rows, ['학번']);
+  const colTiming = colExists(rows, ['지원시기']);
+
+  // 시그니처 자료와 동일한 규칙: 같은 학번의 수시 지원 전과목을 그 학생의
+  // 대표 내신값으로 사용한다 (한 학생이 수시·정시 여러 번 지원해도 내신은
+  // 하나의 값으로 통일 — 그렇지 않으면 같은 학생이 서로 다른 내신 값으로
+  // 여러 번 찍혀 분포·상관계수가 왜곡될 수 있다).
+  let effectiveRows = rows;
+  if(colId && colTiming){
+    const susieMap = new Map();
+    rows.forEach(r=>{
+      const id = r[colId];
+      const timing = String(r[colTiming] || '');
+      if(timing.includes('수시') && id!==null && id!==undefined && id!=='' && !susieMap.has(id)){
+        susieMap.set(id, r[colX]);
+      }
+    });
+    effectiveRows = rows.map(r=>{
+      const id = r[colId];
+      const rep = (id!==null && id!==undefined && id!=='') ? susieMap.get(id) : undefined;
+      return (rep===undefined || rep===null) ? r : Object.assign({}, r, {[colX]: rep});
+    });
+  }
+
+  const pts = effectiveRows
+    .filter(r=> r[colX]!==null && r[colX]!=='' && r[colY]!==null && r[colY]!=='' && !(typeof r[colY]==='number' && Number.isNaN(r[colY])))
+    .map(r=>({x:Number(r[colX]), y:Number(r[colY])}))
+    .filter(p=> !isNaN(p.x) && !isNaN(p.y));
+
+  if(pts.length < 2){ showEmpty(3, '유효한 내신·수능 값이 부족합니다.'); return; }
+  showChart(3);
+
+  // 상관계수는 원본(중복 포함) 데이터 그대로 계산
+  const xs = pts.map(p=>p.x), ys = pts.map(p=>p.y);
+  const corr = pearson(xs, ys);
+  const xmin = Math.min(...xs), xmax = Math.max(...xs);
+  const ymax = Math.max(...ys);
+
+  // ── 동일한 (내신, 수능) 좌표를 가진 점을 하나로 합침 ────────
+  // 화면 표시 소수점(2자리)을 기준으로 같은 좌표면 같은 점으로 취급.
+  // 겹치는 점은 어차피 화면상 한 점처럼 보이므로 시각적 차이는 없고,
+  // Chart.js의 hover/동점(tie) 처리 방식과 무관하게 항상 점 하나당
+  // 팝업 하나만 뜨도록 데이터 자체를 강제로 유일하게 만든다.
+  const dedupMap = new Map();
+  pts.forEach(p=>{
+    const key = p.x.toFixed(2) + '_' + p.y.toFixed(2);
+    if(dedupMap.has(key)){
+      dedupMap.get(key).count += 1;
+    } else {
+      dedupMap.set(key, { x:p.x, y:p.y, count:1 });
+    }
+  });
+  const dedupedPts = [...dedupMap.values()];
+
+  if(charts[3]) charts[3].destroy();
+  charts[3] = new Chart(document.getElementById('chart3'), {
+    type:'scatter',
+    data:{ datasets:[
+      { label:'학생', data: dedupedPts, backgroundColor: 'rgba(27,42,74,0.55)', pointRadius:4, hitRadius:6, hoverRadius:6 },
+      { type:'line', label:'내신=수능 (1:1선)', data:[{x:xmin,y:xmin},{x:xmax,y:xmax}], borderColor:'#4a6fa5', borderDash:[4,3], borderWidth:1.5, pointRadius:0, pointHitRadius:0, pointHoverRadius:0 },
+      { type:'line', label:'내신 3등급', data:[{x:3,y:ymax},{x:3,y:3}], borderColor: COLOR.sage, borderDash:[2,2], borderWidth:1.5, pointRadius:0, pointHitRadius:0, pointHoverRadius:0 },
+      { type:'line', label:'수능 3등급', data:[{x:xmax,y:3},{x:3,y:3}], borderColor: COLOR.sage, borderDash:[2,2], borderWidth:1.5, pointRadius:0, pointHitRadius:0, pointHoverRadius:0 },
+    ]},
+    options:{
+      responsive:true, maintainAspectRatio:false,
+      // 'nearest' + intersect:true → 커서에 가장 가까운 점 "하나"만 선택.
+      // 기존 'point' 모드는 커서가 겹치는 모든 점(hit 반경 안의 점 전부)을
+      // 한꺼번에 반환해서 여러 값이 동시에 표시되는 문제가 있었음.
+      interaction:{ mode:'nearest', intersect:true, axis:'xy' },
+      scales:{
+        x:{ reverse:true, title:{display:true, text:'내신'}, grid:{color:COLOR.grid} },
+        y:{ reverse:true, title:{display:true, text:'수능'}, grid:{color:COLOR.grid} }
+      },
+      plugins:{
+        legend:{ position:'bottom', labels:{boxWidth:12, font:{size:11}, filter:(item)=> item.text!=='내신 3등급' && item.text!=='수능 3등급'} },
+        title:{ display:true, text:'내신과 수능의 상관관계', align:'start', font:{size:15, family:"'Noto Serif KR', serif", weight:'700'}, color: COLOR.navy, padding:{bottom:14} },
+        tooltip:{
+          callbacks:{
+            label(ctx){
+              const x = ctx.parsed.x;
+              const y = ctx.parsed.y;
+              if(ctx.dataset.label === '학생'){
+                const count = (ctx.raw && ctx.raw.count) ? ctx.raw.count : 1;
+                const countLabel = count > 1 ? ` (${count}건)` : '';
+                return `내신 ${x.toFixed(2)} · 수능 ${y.toFixed(2)}${countLabel}`;
+              }
+              return `${ctx.dataset.label}: (${x.toFixed(2)}, ${y.toFixed(2)})`;
+            }
+          }
+        }
+      }
+    },
+    plugins:[{
+      id:'ch3corr',
+      afterDraw(chart){
+        const {ctx, chartArea} = chart;
+        ctx.save();
+        ctx.font = "700 14px 'Noto Sans KR', sans-serif";
+        ctx.fillStyle = COLOR.navy;
+        ctx.textAlign = 'left';
+        ctx.fillText(`상관관계(r) = ${corr.toFixed(1)}`, chartArea.left + 16, chartArea.top + 24);
+        ctx.restore();
+      }
+    }]
+  });
+}
+
+/* ---- CHART 4: 전형별 합격률 · 합격횟수 (도넛) ---- */
+const CATEGORY_COLOR = {'교과': COLOR.teal, '종합': COLOR.coral, '논술': COLOR.gold, '실기': COLOR.sage};
+const CATEGORY_ORDER = ['교과','종합','논술','실기'];
+
+function renderChart4(rows){
+  const colType = colExists(rows, ['전형분류']);
+  const colMethod = colExists(rows, ['전형방법']);
+  const colTiming = colExists(rows, ['지원시기']);
+  const colFinal = colExists(rows, ['최종']);
+  if(!colType || !colTiming || !colFinal){
+    showEmpty(4, missingColsMessage([{label:'전형분류',col:colType},{label:'지원시기',col:colTiming},{label:'최종',col:colFinal}])); return;
+  }
+
+  const modified = rows.map(r=>{
+    const copy = Object.assign({}, r);
+    const method = colMethod ? String(r[colMethod]||'') : '';
+    if(copy[colType]==='학생부'){
+      if(method.includes('100%')) copy[colType] = '교과';
+      else if(method.includes('면접')) copy[colType] = '종합';
+    }
+    return copy;
+  });
+
+  const susi = modified.filter(r=> String(r[colTiming]||'').includes('수시'));
+  if(!susi.length){ showEmpty(4, '수시 지원 데이터가 없습니다.'); return; }
+
+  const totalCount = susi.length;
+  const totalPass = susi.filter(r=>r[colFinal]==='합').length;
+  const totalRate = totalCount ? Math.round(totalPass/totalCount*100) : 0;
+
+  const cats = [];
+  CATEGORY_ORDER.forEach(cat=>{
+    const subset = susi.filter(r=> r[colType]===cat);
+    if(subset.length){
+      const pass = subset.filter(r=>r[colFinal]==='합').length;
+      cats.push({ cat, count: subset.length, pass, rate: pass/subset.length*100 });
+    }
+  });
+
+  if(!cats.length){ showEmpty(4, '교과/종합/논술/실기로 분류된 데이터가 없습니다.'); return; }
+  showChart(4);
+
+  if(charts[4]) charts[4].destroy();
+  charts[4] = new Chart(document.getElementById('chart4'), {
+    type:'doughnut',
+    data:{
+      labels: cats.map(c=>c.cat),
+      datasets:[{ data: cats.map(c=>c.count), backgroundColor: cats.map(c=>CATEGORY_COLOR[c.cat]), borderWidth: 2, borderColor: '#fbf9f4' }]
+    },
+    options:{
+      responsive:true, maintainAspectRatio:false, cutout:'80%',
+      plugins:{
+        legend:{ position:'bottom', labels:{boxWidth:12, font:{size:12}} },
+        title:{ display:true, text:'수시 전형별 합격률 · 합격횟수', align:'start', font:{size:15, family:"'Noto Serif KR', serif", weight:'700'}, color: COLOR.navy, padding:{bottom:14} }
+      }
+    },
+    plugins:[{
+      id:'ch4center',
+      afterDraw(chart){
+        const {ctx, chartArea} = chart;
+        const cx = (chartArea.left+chartArea.right)/2;
+        const cy = (chartArea.top+chartArea.bottom)/2;
+        ctx.save();
+        ctx.textAlign='center';
+        let y = cy - (cats.length*13)/2 - 8;
+        ctx.font = "700 12px 'Noto Sans KR', sans-serif";
+        ctx.fillStyle = COLOR.navy;
+        ctx.fillText(`수시지원횟수: ${totalCount}회`, cx, y); y+=17;
+        ctx.fillStyle = '#6a2f56';
+        ctx.fillText(`수시 합격률: ${totalRate}% (${totalPass}회/${totalCount}회)`, cx, y); y+=19;
+        ctx.font = "700 12px 'Noto Sans KR', sans-serif";
+        cats.forEach(c=>{
+          ctx.fillStyle = CATEGORY_COLOR[c.cat];
+          ctx.fillText(`${c.cat}: ${c.rate.toFixed(0)}% (${c.pass}회)`, cx, y);
+          y += 15;
+        });
+        ctx.restore();
+      }
+    }]
+  });
+}
+/* ================================================================
+   3. 시그니처 엑셀자료 생성 (구 openpyxl 스크립트 이식)
+================================================================ */
+const SIG_TYPE_COLORS = {'교과':'FFFF00','종합':'90EE90','논술':'800080','실기':'FFA500','수능':'A9A9A9'};
+const SIG_TYPE_FONT_COLORS = {'교과':'000000','종합':'000000','논술':'FFFFFF','실기':'000000','수능':'000000'};
+const SIG_BINS = [1.0,3.0,4.0,5.0,6.0,7.0,9.1];
+const SIG_LABELS = ['1.0~2.99','3.0~3.99','4.0~4.99','5.0~5.99','6.0~6.99','7.0~9.0'];
+
+function sigNum(v){
+  if(v===null || v===undefined || v==='') return null;
+  const n = Number(v);
+  return Number.isNaN(n) ? null : n;
+}
+function sigStr(v){
+  return (v===null || v===undefined) ? '' : String(v);
+}
+function thinBorder(){
+  const s = {style:'thin', color:{rgb:'000000'}};
+  return {top:s, bottom:s, left:s, right:s};
+}
+function boundaryBorder(thickSide){
+  // thickSide: 'left' or 'right'
+  const thin = {style:'thin', color:{rgb:'000000'}};
+  const thick = {style:'medium', color:{rgb:'000000'}};
+  return {
+    top: thin, bottom: thin,
+    left: thickSide==='left' ? thick : thin,
+    right: thickSide==='right' ? thick : thin,
+  };
+}
+
+document.getElementById('signatureBtn').addEventListener('click', ()=>{
+  if(!resultRows){ return; }
+  const btn = document.getElementById('signatureBtn');
+  const msg = document.getElementById('signatureStatusMsg');
+  btn.disabled = true;
+  msg.textContent = '시그니처 엑셀자료 생성 중...';
+  msg.className = 'status-msg';
+  try{
+    let filename = document.getElementById('signatureFilenameInput').value.trim() || `signature_${workYear}.xlsx`;
+    if(!filename.toLowerCase().endsWith('.xlsx')) filename += '.xlsx';
+    buildSignatureWorkbook(resultRows, filename);
+    msg.textContent = '생성 완료 — 다운로드된 파일을 확인해 주세요.';
+    msg.className = 'status-msg ok';
+  }catch(err){
+    console.error(err);
+    msg.innerHTML = '생성 중 오류가 발생했습니다: ' + err.message +
+      `<br><span style="opacity:.85">감지된 열(${resultColumns ? resultColumns.length : 0}개): ${resultColumns ? resultColumns.join(', ') : ''}</span>`;
+    msg.className = 'status-msg error';
+  }finally{
+    btn.disabled = false;
+  }
+});
+
+function buildSignatureWorkbook(rawRows, filename){
+  const colUni = colExists(rawRows, ['대학']);
+  const colDept = colExists(rawRows, ['모집단위']);
+  const colFinal = colExists(rawRows, ['최종']);
+  const colTiming = colExists(rawRows, ['지원시기']);
+  const colType = colExists(rawRows, ['전형분류']);
+  const colGrade = colExists(rawRows, ['전과목']);
+  const colId = colExists(rawRows, ['학번']);
+  const colSuneung = colExists(rawRows, ['등급수능']);
+  if(!colUni || !colDept || !colFinal || !colTiming || !colType || !colGrade){
+    throw new Error(missingColsMessage([
+      {label:'대학',col:colUni}, {label:'모집단위',col:colDept}, {label:'최종',col:colFinal},
+      {label:'지원시기',col:colTiming}, {label:'전형분류',col:colType}, {label:'전과목',col:colGrade},
+    ]));
+  }
+
+  // ── 데이터 복제 및 기본 정리 ──────────────────────────────
+  let df = rawRows.map(r=>({
+    학번: colId ? r[colId] : null,
+    전과목: sigNum(r[colGrade]),
+    지원시기: sigStr(r[colTiming]),
+    전형분류: r[colType],
+    대학: sigStr(r[colUni]).replace(/학교/g, ''),
+    모집단위: sigStr(r[colDept]),
+    최종: (r[colFinal]===null || r[colFinal]===undefined || r[colFinal]==='') ? '불' : r[colFinal],
+    등급수능: colSuneung ? r[colSuneung] : null,
+  }));
+  df.forEach(r=>{
+    if(r['전형분류']==='일반(수능위주)') r['전형분류'] = '수능';
+    if(r['전형분류']==='학생부') r['전형분류'] = '교과';
+    r['대학_모집단위'] = r['대학'] + '\n' + r['모집단위'];
+  });
+
+  // ── 학번별 수시 전과목을 대표 전과목으로 사용 ────────────
+  const susieMap = new Map();
+  df.forEach(r=>{
+    if(r['지원시기'].includes('수시') && r['학번']!==null && r['학번']!==undefined && !susieMap.has(r['학번'])){
+      susieMap.set(r['학번'], r['전과목']);
+    }
+  });
+  df.forEach(r=>{
+    const rep = (r['학번']!==null && r['학번']!==undefined) ? susieMap.get(r['학번']) : undefined;
+    r['전과목'] = (rep!==undefined && rep!==null) ? rep : r['전과목'];
+  });
+
+  // ── 합격 / 불합격 분리 및 정렬 ────────────────────────────
+  const dfPass = df.filter(r=>r['최종']==='합').sort((a,b)=>(a['전과목']??Infinity)-(b['전과목']??Infinity));
+  const dfFail = df.filter(r=>r['최종']!=='합').sort((a,b)=>(a['전과목']??Infinity)-(b['전과목']??Infinity));
+
+  // ── 전체 등수 (전과목 오름차순, 낮을수록 1등) ────────────
+  const uniqueGrades = [...new Set([...dfPass, ...dfFail].map(r=>r['전과목']).filter(v=>v!==null))].sort((a,b)=>a-b);
+  const rankMap = new Map(uniqueGrades.map((g,i)=>[g, i+1]));
+
+  const wb = XLSX.utils.book_new();
+
+  for(let bi=0; bi<SIG_LABELS.length; bi++){
+    const label = SIG_LABELS[bi], low = SIG_BINS[bi], high = SIG_BINS[bi+1];
+    const passGrp = dfPass.filter(r=> r['전과목']!==null && r['전과목']>=low && r['전과목']<high);
+    const failGrp = dfFail.filter(r=> r['전과목']!==null && r['전과목']>=low && r['전과목']<high);
+    buildSignatureSheet(wb, label, passGrp, failGrp, rankMap);
+  }
+
+  XLSX.writeFile(wb, filename, { cellStyles: true });
+}
+
+function sigGroupByGrade(rows){
+  const map = new Map();
+  rows.forEach(r=>{
+    const g = r['전과목'];
+    if(g===null || g===undefined) return;
+    if(!map.has(g)) map.set(g, {texts:[], types:[]});
+    map.get(g).texts.push(r['대학_모집단위']);
+    map.get(g).types.push(r['전형분류']);
+  });
+  return map;
+}
+
+function buildSignatureSheet(wb, label, passGrp, failGrp, rankMap){
+  const passMap = sigGroupByGrade(passGrp);
+  const failMap = sigGroupByGrade(failGrp);
+  const allGrades = [...new Set([...passMap.keys(), ...failMap.keys()])].sort((a,b)=>a-b);
+
+  if(!allGrades.length){
+    const ws = XLSX.utils.aoa_to_sheet([['내신등급'],['해당 데이터 없음']]);
+    XLSX.utils.book_append_sheet(wb, ws, label);
+    return;
+  }
+
+  const maxPassLen = Math.max(0, ...allGrades.map(g=> passMap.has(g)? passMap.get(g).texts.length : 0));
+  const maxFailLen = Math.max(0, ...allGrades.map(g=> failMap.has(g)? failMap.get(g).texts.length : 0));
+
+  // 수능등급 (구간 내 첫 등장값)
+  const suneungMap = new Map();
+  [...passGrp, ...failGrp].forEach(r=>{
+    const g = r['전과목'];
+    if(g!==null && g!==undefined && !suneungMap.has(g)) suneungMap.set(g, r['등급수능']);
+  });
+
+  const legendTypes = Object.keys(SIG_TYPE_COLORS);
+  const nIndexCols = 3; // 석차, 내신등급, 수능등급
+  const nCols = nIndexCols + maxPassLen + maxFailLen;
+
+  // ── AOA 구성: R1 범례 / R2 공백 / R3 헤더 / R4~ 데이터 ────
+  const aoa = [];
+  const legendRow = new Array(nCols).fill(null);
+  legendTypes.forEach((t,i)=>{ legendRow[i] = t; });
+  aoa.push(legendRow);
+  aoa.push(new Array(nCols).fill(null));
+
+  const headerRow = new Array(nCols).fill(null);
+  headerRow[0]='석차'; headerRow[1]='내신등급'; headerRow[2]='수능등급';
+  if(maxPassLen>0) headerRow[nIndexCols] = '합격';
+  if(maxFailLen>0) headerRow[nIndexCols+maxPassLen] = '불합격';
+  aoa.push(headerRow);
+
+  const cellTypeGrid = []; // 전형분류 색상 판단용 (data row별)
+  allGrades.forEach(g=>{
+    const row = new Array(nCols).fill(null);
+    const typeRow = new Array(nCols).fill(null);
+    row[0] = rankMap.get(g) ?? null;
+    row[1] = g;
+    row[2] = suneungMap.has(g) && suneungMap.get(g)!==null && suneungMap.get(g)!==undefined && !Number.isNaN(suneungMap.get(g))
+      ? suneungMap.get(g) : '無';
+
+    const pass = passMap.get(g);
+    if(pass){
+      pass.texts.forEach((txt,i)=>{ row[nIndexCols+i] = txt; typeRow[nIndexCols+i] = pass.types[i]; });
+    }
+    const fail = failMap.get(g);
+    if(fail){
+      fail.texts.forEach((txt,i)=>{ row[nIndexCols+maxPassLen+i] = txt; typeRow[nIndexCols+maxPassLen+i] = fail.types[i]; });
+    }
+    aoa.push(row);
+    cellTypeGrid.push(typeRow);
+  });
+
+  const ws = XLSX.utils.aoa_to_sheet(aoa);
+  const HEADER_R = 2; // 0-indexed row of header (엑셀 3행)
+  const DATA_START_R = 3; // 0-indexed row where data starts (엑셀 4행)
+  const boundaryCol = maxFailLen>0 ? nIndexCols + maxPassLen : null; // 0-indexed 불합격1 열
+
+  // ── 병합: 범례는 병합하지 않음(각 셀 독립), 헤더의 합격/불합격만 병합 ──
+  ws['!merges'] = ws['!merges'] || [];
+  if(maxPassLen>0){
+    ws['!merges'].push({ s:{r:HEADER_R, c:nIndexCols}, e:{r:HEADER_R, c:nIndexCols+maxPassLen-1} });
+  }
+  if(maxFailLen>0){
+    ws['!merges'].push({ s:{r:HEADER_R, c:nIndexCols+maxPassLen}, e:{r:HEADER_R, c:nCols-1} });
+  }
+
+  function setCell(r, c, style){
+    const addr = XLSX.utils.encode_cell({r, c});
+    if(!ws[addr] || ws[addr].v===undefined || ws[addr].v===null){
+      // 값이 없는 셀도 빈 문자열로 실제 셀을 만들어야 테두리/배경 스타일이 파일에 기록됨.
+      // (v가 undefined인 'z' 타입 셀은 일부 쓰기 로직에서 통째로 생략되어 셀선이 끊겨 보임)
+      ws[addr] = { t:'s', v:'' };
+    }
+    ws[addr].s = Object.assign({}, ws[addr].s, style);
+  }
+
+  // 범례 행 스타일
+  legendTypes.forEach((t,i)=>{
+    setCell(0, i, {
+      font:{name:'Arial', sz:10, bold:true, color:{rgb:SIG_TYPE_FONT_COLORS[t]}},
+      fill:{patternType:'solid', fgColor:{rgb:SIG_TYPE_COLORS[t]}},
+      alignment:{horizontal:'center', vertical:'center'},
+      border: thinBorder(),
+    });
+  });
+
+  // 헤더 행 스타일 (인덱스 열 + 합격/불합격 병합 라벨)
+  for(let c=0; c<nIndexCols; c++){
+    setCell(HEADER_R, c, {
+      font:{name:'Arial', sz:10, bold:true, color:{rgb:'000000'}},
+      alignment:{horizontal:'center', vertical:'center'},
+      border: thinBorder(),
+    });
+  }
+  for(let c=nIndexCols; c<nIndexCols+maxPassLen; c++){
+    setCell(HEADER_R, c, {
+      font:{name:'Arial', sz:10, bold:true, color:{rgb:'000000'}},
+      alignment:{horizontal:'center', vertical:'center'},
+      border: (boundaryCol && c===boundaryCol-1) ? boundaryBorder('right') : thinBorder(),
+    });
+  }
+  for(let c=nIndexCols+maxPassLen; c<nCols; c++){
+    setCell(HEADER_R, c, {
+      font:{name:'Arial', sz:10, bold:true, color:{rgb:'000000'}},
+      alignment:{horizontal:'center', vertical:'center'},
+      border: (boundaryCol && c===boundaryCol) ? boundaryBorder('left') : thinBorder(),
+    });
+  }
+
+  // 데이터 행 스타일
+  for(let ri=0; ri<cellTypeGrid.length; ri++){
+    const r = DATA_START_R + ri;
+    for(let c=0; c<nCols; c++){
+      let border;
+      if(boundaryCol && c===boundaryCol) border = boundaryBorder('left');
+      else if(boundaryCol && c===boundaryCol-1) border = boundaryBorder('right');
+      else border = thinBorder();
+
+      if(c < nIndexCols){
+        setCell(r, c, {
+          font:{name:'Arial', sz:10},
+          alignment:{horizontal:'center', vertical:'center', wrapText:true},
+          border,
+        });
+        continue;
+      }
+      const addr = XLSX.utils.encode_cell({r,c});
+      const hasValue = ws[addr] && ws[addr].v !== undefined && ws[addr].v !== null && ws[addr].v !== '';
+      if(hasValue){
+        const entryType = cellTypeGrid[ri][c];
+        let bg, fc;
+        if(entryType && SIG_TYPE_COLORS[entryType]){
+          bg = SIG_TYPE_COLORS[entryType]; fc = SIG_TYPE_FONT_COLORS[entryType];
+        } else if(c < nIndexCols+maxPassLen){
+          bg = 'FFFACD'; fc = '000000';
+        } else {
+          bg = 'FFE4E1'; fc = '000000';
+        }
+        setCell(r, c, {
+          font:{name:'Arial', sz:10, color:{rgb:fc}},
+          fill:{patternType:'solid', fgColor:{rgb:bg}},
+          alignment:{horizontal:'center', vertical:'center', wrapText:true},
+          border,
+        });
+      } else {
+        setCell(r, c, {
+          font:{name:'Arial', sz:10},
+          alignment:{horizontal:'center', vertical:'center', wrapText:true},
+          border,
+        });
+      }
+    }
+  }
+
+  // 열 너비 / 행 높이
+  ws['!cols'] = new Array(nCols).fill({wch: 11});
+  ws['!rows'] = [{hpx:20}, {hpx:15}, {hpx:20}];
+  for(let ri=0; ri<cellTypeGrid.length; ri++) ws['!rows'].push({hpx:38});
+
+  // 틀 고정 (석차·내신등급·수능등급 3열 + 범례·헤더 3행 고정)
+  ws['!freeze'] = { xSplit: nIndexCols, ySplit: DATA_START_R, topLeftCell: XLSX.utils.encode_cell({r:DATA_START_R, c:nIndexCols}), activePane: 'bottomRight', state: 'frozen' };
+
+  const safeSheetName = label.slice(0,31);
+  XLSX.utils.book_append_sheet(wb, ws, safeSheetName);
+}
+</script>
+</body>
+</html>
